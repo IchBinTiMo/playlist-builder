@@ -73,26 +73,16 @@ const PlaylistBuilder = () => {
         keywords: keywords
       }
 
-      // console.log("Playlist Name:", playlistName);
-      // console.log("Keywords:", keywords);
       console.log("Payload:", payload);
       // Send POST request to backend
-      const response = await axios.post("http://localhost:8080/api", payload, {
+      const response = await axios.post("http://localhost:8080/create-playlist", payload, {
         headers: {
           "Content-Type": "application/json",
         },
       });
 
-      window.location.href = response.data.authUrl;
-      // await fetch(response.data.authUrl, {
-      //   method: "GET",
-      //   mode: "no-cors",
-      // });
-      // window.location.assign(response.data.authUrl);
-      // window.location.assign("http://localhost:5173");
-      // console.log("Response:", res.body);
+      console.log("Response:", response.data);
       alert("Playlist created successfully!");
-      // setLoading(false);
     } catch (error) {
       console.error("Error creating playlist:", error);
       alert("Failed to create playlist");
@@ -159,10 +149,6 @@ const PlaylistBuilder = () => {
           )}
         </div>
       ))}
-
-      {/* <button onClick={addNewInput} style={styles.addButton}>
-        Add Keyword
-      </button> */}
 
       <button onClick={handleSubmit} style={styles.submitButton}>
         Submit

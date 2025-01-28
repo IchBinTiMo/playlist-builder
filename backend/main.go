@@ -2,18 +2,17 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"time"
 
 	"github.com/joho/godotenv"
 	spotify "github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
+	"golang.org/x/oauth2"
 )
 
 var (
@@ -27,8 +26,8 @@ var (
 			"playlist-modify-public",
 			"playlist-modify-private",
 		))
-	ch    = make(chan *spotify.Client)
 	state = "spotify_auth_state"
+	token *oauth2.Token
 )
 
 // Enable CORS by setting the necessary headers
@@ -38,11 +37,6 @@ func enableCORS(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization") // Allow headers
 	w.Header().Set("Access-Control-Allow-Credentials", "true")                    // Allow cookies (optional)
 
-	// Handle preflight request for OPTIONS method
-	// if r.Method == http.MethodOptions {
-	// 	w.WriteHeader(http.StatusOK)
-	// 	return
-	// }
 }
 
 func handleAuth(w http.ResponseWriter, r *http.Request) {
@@ -54,32 +48,34 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var payload map[string]interface{}
+	// encodedPayload := base64.StdEncoding.EncodeToString(payloadJSON)
+	url := authenticator.AuthURL(state)
+	fmt.Println("url: ", url)
+	http.Redirect(w, r, url, http.StatusFound)
+}
 
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+func doneAuth(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("doneAuth called")
+	enableCORS(w)
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	payloadJSON, _ := json.Marshal(payload)
-	state = base64.StdEncoding.EncodeToString(payloadJSON)
-	scopes := "playlist-modify-public playlist-modify-private"
+	tok, err := authenticator.Token(r.Context(), state, r)
+	if err != nil {
+		fmt.Println("102", r.Context(), r.ContentLength)
+	}
 
-	authUrl := fmt.Sprintf(
-		"https://accounts.spotify.com/authorize?client_id=%s&response_type=code&redirect_uri=%s&state=%s&scope=%s",
-		os.Getenv("CLIENT_ID"),
-		url.QueryEscape(redirectURI),
-		url.QueryEscape(state),
-		url.QueryEscape(scopes),
-	)
+	// fmt.Println("tok: ", tok.ExpiresIn)
 
-	// url := authenticator.AuthURL(encodedPayload)
-	// http.Redirect(w, r, url, http.StatusFound)
-
-	response := map[string]string{"authUrl": authUrl}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-
+	token = &oauth2.Token{
+		AccessToken:  tok.AccessToken,
+		TokenType:    tok.TokenType,
+		RefreshToken: tok.RefreshToken,
+		Expiry:       tok.Expiry,
+	}
 }
 
 func completeAuth(w http.ResponseWriter, r *http.Request) {
@@ -92,40 +88,20 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tok, err := authenticator.Token(r.Context(), state, r)
-	if err != nil {
-		fmt.Println("102", r.Context(), r.ContentLength)
-		http.Error(w, "Couldn't get token", http.StatusForbidden)
-		log.Fatal(err)
-	}
-
-	st := r.FormValue("state")
-
-	if st != state {
-		fmt.Println("109")
-		http.NotFound(w, r)
-		log.Fatalf("State mismatch: %s != %s\n", st, state)
+	if time.Now().After(token.Expiry) {
+		token, _ = authenticator.RefreshToken(r.Context(), token)
 	}
 
 	var frontendPayload map[string]interface{}
 
-	decodedState, err := base64.StdEncoding.DecodeString(st)
-
-	if err != nil {
-		fmt.Println("119", st, state)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&frontendPayload); err != nil {
+		fmt.Println("Error decoding payload:", err)
 		return
 	}
 
-	if err := json.Unmarshal(decodedState, &frontendPayload); err != nil {
-		fmt.Println("125", frontendPayload, decodedState)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	// fmt.Print(frontendPayload)
 
-	fmt.Print(frontendPayload)
-
-	client := spotify.New(authenticator.Client(r.Context(), tok))
+	client := spotify.New(authenticator.Client(r.Context(), token))
 
 	// Get the current user
 	user, err := client.CurrentUser(context.Background())
@@ -216,12 +192,11 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Tracks added to the playlist!")
 
-	// http.Redirect(w, r, "http://localhost:5173/", http.StatusFound)
-	fmt.Fprintln(w, "Login Completed!")
-	// response := map[string]string{"status": "Done!"}
-	// w.Header().Set("Content-Type", "application/json")
-	// json.NewEncoder(w).Encode(response)
-	ch <- client
+	response := map[string]string{"status": "Done!"}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		fmt.Println("Error encoding response:", err)
+	}
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -233,15 +208,13 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	http.HandleFunc("/callback", completeAuth)
-	http.HandleFunc("/api", handleAuth)
+	http.HandleFunc("/callback", doneAuth)
+	http.HandleFunc("/create-playlist", completeAuth)
+	http.HandleFunc("/auth", handleAuth)
 	http.HandleFunc("/", handler)
 
+	fmt.Println("Please log in to Spotify by visiting: http://localhost:8080/auth")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println("Please log in to Spotify by visiting: http://localhost:8080")
-	// client := <-ch
-
 }
