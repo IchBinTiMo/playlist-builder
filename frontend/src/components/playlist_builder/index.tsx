@@ -19,6 +19,10 @@ const PlaylistBuilder = () => {
   // Refs to track each input
   const inputRefs = useRef<HTMLInputElement[]>([]);
 
+  // State for playlist URL
+  const [playlist_url, setPlaylistUrl] = useState("");
+  const [receipt, setReceipt] = useState(false);
+
   const addNewInput = () => {
     setInputs((prev) => [
       ...prev,
@@ -82,6 +86,9 @@ const PlaylistBuilder = () => {
       });
 
       console.log("Response:", response.data);
+
+      setPlaylistUrl(response.data.url);
+      setReceipt(true);
       alert("Playlist created successfully!");
     } catch (error) {
       console.error("Error creating playlist:", error);
@@ -100,6 +107,7 @@ const PlaylistBuilder = () => {
     <div style={styles.container}>
       <h1 style={styles.title}>Playlist Builder</h1>
 
+      {receipt && (<h3><a href={playlist_url} target="_blank">Click me to see your playlist</a></h3>)}
       <div style={styles.keywordsContainer}>
         <input
           type="text"

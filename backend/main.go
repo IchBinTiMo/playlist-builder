@@ -125,7 +125,7 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalf("Failed to create playlist: %v", err)
 	}
-	fmt.Printf("Created playlist: %s\n", playlist.Name)
+	fmt.Printf("Created playlist: %s\n", playlist.ExternalURLs["spotify"])
 
 	keywords, ok := frontendPayload["keywords"].([]interface{})
 
@@ -192,7 +192,11 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Tracks added to the playlist!")
 
-	response := map[string]string{"status": "Done!"}
+	response := make(map[string]string)
+
+	response["status"] = "Done"
+	response["url"] = playlist.ExternalURLs["spotify"]
+
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		fmt.Println("Error encoding response:", err)
