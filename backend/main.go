@@ -115,7 +115,7 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	playlistName := frontendPayload["playlistName"].(string)
 	fmt.Println("Playlist Name:", playlistName)
 	if playlistName == "" {
-		playlistName = "[My Go Playlist] " + currentTime.Format("2006-01-02 15:04:05")
+		playlistName = "[Playlist-Builder] " + currentTime.Format("2006-01-02 15:04:05")
 	}
 
 	description := "A playlist created with Go and the Spotify API"
