@@ -1,0 +1,15 @@
+{
+    "manifest_version": 3,
+    "name": "Playlist Builder",
+    "version": "0.1.0",
+    "permissions": ["storage", "identity"],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "action": {
+      "default_popup": "popup.html",
+      "default_icon": {
+      }
+    }
+  }
+  

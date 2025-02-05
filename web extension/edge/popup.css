@@ -1,0 +1,74 @@
+.dark {
+    background: #191414;
+}
+
+.container {
+    position: relative;
+    display: block;
+    margin-bottom: 10px;
+}
+
+html {
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+body {
+    width: 350px;
+    height: 200px;
+    border-radius: 15px;
+}
+
+button {
+    border-radius: 8px;
+    border: 2px solid transparent;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 700;
+    font-family: inherit;
+    background: #323232;
+    cursor: pointer;
+    transition: border-color 0.25s;
+}
+
+button:Hover {
+    border-radius: 8px;
+    border: 2px solid;
+    border-color: #1DB954;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 700;
+    font-family: inherit;
+    background: #323232;
+    cursor: pointer;
+    transition: border-color 0.25s;
+}
+
+textarea {
+    background: transparent;
+    padding: 5px;
+    font-size: 16px;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 10px; // Rounded corners
+    border: 3px solid;
+    border-color: #1DB954;
+    min-height: 40px;
+}
+
+textarea {
+    overflow: auto; /* Allow scrolling */
+    scrollbar-width: none; /* Firefox */
+}
+
+textarea::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+}
+
+
+#playlistName {
+    resize: none; /* Disable resizing */
+    overflow: hidden; /* Hide overflow */
+    white-space: nowrap; /* Prevent text from wrapping */
+    height: 40px; /* Adjust height */
+}
